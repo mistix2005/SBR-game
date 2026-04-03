@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SBR: DEBIL EDITION</title>
+    <style>
+        body { margin: 0; background: #000; color: gold; font-family: 'Courier New', Courier, monospace; overflow: hidden; touch-action: none; }
+        canvas { display: block; image-rendering: pixelated; }
+        #overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.9); z-index: 100; }
+        button { padding: 15px 30px; font-size: 20px; background: #ff0000; color: white; border: 3px solid #fff; cursor: pointer; border-radius: 10px; }
+        #ui { position: absolute; top: 10px; left: 10px; pointer-events: none; }
+        #joystick { position: absolute; bottom: 30px; right: 30px; width: 80px; height: 80px; background: rgba(255,0,0,0.5); border: 3px solid #fff; border-radius: 15px; }
+    </style>
+</head>
+<body>
+
+<div id="overlay">
+    <h1>STEEL BALL RUN</h1>
+    <p>STAGE 1: NEBRASKA SLOPES</p>
+    <button onclick="startGame()">START RACE</button>
+</div>
+
+<div id="ui">
+    <div id="dist">DISTANCE: 0m</div>
+    <div id="best">BEST: 0m</div>
+</div>
+
+<div id="joystick"></div>
+<canvas id="gameCanvas"></canvas>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let gameActive = false;
+let distance = 0;
+let highScore = localStorage.getItem('sbrBest') || 0;
+
+// Твои картинки
+const imgGyro = new Image(); imgGyro.src = 'https://i.ibb.co/vxwDxgXC/gyro-sprites.png';
+const imgBot = new Image(); imgBot.src = 'https://i.ibb.co/chcXF11P/cowboy-sprites.png';
+const imgBg = new Image(); imgBg.src = 'https://i.ibb.co/gb7rX057/grass-plain.png';
+
+let playerX = window.innerWidth / 2;
+let targetX = playerX;
+let camZoom = 1.5;
+
+function startGame() {
+    document.getElementById('overlay').style.display = 'none';
+    if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+    gameActive = true;
+    update();
+}
+
+// Управление
+const joy = document.getElementById('joystick');
+joy.addEventListener('touchmove', (e) => {
+    let rect = joy.getBoundingClientRect();
+    let x = (e.touches[0].clientX - rect.left) / rect.width;
+    targetX = x * window.innerWidth;
+    e.preventDefault();
+}, {passive: false});
+
+function update() {
+    if (!gameActive) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    distance += 1;
+    
+    // Эффект камеры (первые 5 сек)
+    if (distance < 300) camZoom -= 0.002;
+    if (camZoom < 0.8) camZoom = 0.8;
+
+    // Фон (бесконечный)
+    let bgOff = (distance * 10) % window.innerHeight;
+    ctx.drawImage(imgBg, 0, bgOff - window.innerHeight, window.innerWidth, window.innerHeight);
+    ctx.drawImage(imgBg, 0, bgOff, window.innerWidth, window.innerHeight);
+
+    // Рисуем Джайро (Разрезаем спрайт)
+    playerX += (targetX - playerX) * 0.1;
+    let anim = Math.floor(distance / 10) % 2;
+    let sw = imgGyro.width / 4;
+
+    ctx.save();
+    ctx.translate(playerX, window.innerHeight - 150);
+    ctx.scale(camZoom, camZoom);
+    ctx.shadowBlur = 15; ctx.shadowColor = "gold";
+    ctx.drawImage(imgGyro, anim * sw, 0, sw, imgGyro.height, -25, -40, 50, 80);
+    ctx.restore();
+
+    document.getElementById('dist').innerText = `DISTANCE: ${distance}m`;
+    document.getElementById('best').innerText = `BEST: ${highScore}m`;
+    
+    if (distance > highScore) {
+        highScore = distance;
+        localStorage.setItem('sbrBest', highScore);
+    }
+
+    requestAnimationFrame(update);
+}
+
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+</script>
+</body>
+</html>
